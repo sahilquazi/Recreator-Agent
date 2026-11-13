@@ -1,8 +1,8 @@
 # Secrets: never commit these
 .env
 
-# Run output: screenshots and results from real tickets
-runs/
+# Run output: screenshots and results from real tickets (top level only; tests/fixtures/*/runs/ is test data)
+/runs/
 
 # Python clutter
 __pycache__/

@@ -1,0 +1,248 @@
+{
+  "_note": "Stand-in: a HAND-WRITTEN sample in the Recreator's result.json format (Recreator-Agent repo), not real pipeline output. Bug: Mattermost issue #39212. Screenshots and the patch are real (PR #39216, commit be207f8); the run around them is hand-written. suspects[].excerpt is a PROPOSED field.",
+  "ticket_id": 39212,
+  "status": "fixed",
+  "error": null,
+  "triage": {
+    "claim": "Inline Markdown images in the channel header render as display: block, so each wraps onto its own line and most of the header is hidden.",
+    "expected": "Images stay on the same line as the surrounding text.",
+    "actual": "Each image renders on its own line; the header text is pushed out of view.",
+    "environment": {
+      "users": [
+        "user_1 (system admin)"
+      ],
+      "structure": [
+        "One team; one channel, 'Image Header Test'"
+      ],
+      "config": [
+        "Default server settings"
+      ]
+    },
+    "repro_plan": [
+      "Set a channel header to `foo bar ![](image-url) ![](image-url) hello world`.",
+      "Wait for both images to load.",
+      "Check whether the images and text share one row."
+    ],
+    "variations_to_try": [
+      "One image instead of two",
+      "Two images in a normal message instead of the header",
+      "The header popover and the Channel Info sidebar"
+    ],
+    "hypotheses": [
+      "An inline style on the image container overrides the stylesheet.",
+      "A header-specific stylesheet sets the wrong display value."
+    ],
+    "missing_info": [],
+    "follow_up_questions": []
+  },
+  "repro": {
+    "status": "reproduced",
+    "location": "Web app > channel header > inline Markdown images",
+    "trigger": "Header text with two inline images, after the images load",
+    "expected": "Images and text on one row",
+    "observed": "Each image on its own row (computed display: block)",
+    "failing_calls": [],
+    "errors": [],
+    "layer": "client",
+    "pattern": "Every inline Markdown image once loaded: channel header, header-change system message, messages with several images. Images still loading are not affected.",
+    "attempts": [
+      "Header with two images: each image on its own line (reproduced)",
+      "Header with one image: the text after it still wraps",
+      "Normal message with two images: each on its own line (same cause)"
+    ],
+    "repro_script": "\"\"\"Repro: inline Markdown images in the channel header wrap onto their own lines. Exit 1 = bug present.\"\"\"\nimport sys\nfrom playwright.sync_api import sync_playwright\n\nwith sync_playwright() as p:\n    page = p.chromium.launch().new_page()\n    page.goto(f\"{BASE}/{TEAM}/channels/{CHANNEL}\")  # placeholders set by the sandbox\n    page.wait_for_selector(\".channel-header__description .file-preview__button img\")\n    tops = page.eval_on_selector_all(\n        \".channel-header__description .file-preview__button\",\n        \"els => els.map(e => [getComputedStyle(e).display, e.getBoundingClientRect().top])\")\n    # Two images and the text should share one row; display:block stacks them.\n    sys.exit(1 if any(d == \"block\" for d, _ in tops) or len({round(t) for _, t in tops}) > 1 else 0)\n",
+    "screenshots": [
+      "toolbar-before-after.png",
+      "system-message-before-after.png"
+    ],
+    "confidence": 0.9,
+    "verified_on_current": true,
+    "verified_clean_on_last_good": null
+  },
+  "handoff": {
+    "claim": "Inline Markdown images in the channel header render as display: block, so each wraps onto its own line and most of the header is hidden.",
+    "app": "Mattermost",
+    "version": "11.7.12",
+    "last_good_version": null,
+    "layer": "client",
+    "failing_calls": [],
+    "errors": [],
+    "pattern": "Every inline Markdown image once loaded: channel header, header-change system message, messages with several images. Images still loading are not affected.",
+    "repro_script": "\"\"\"Repro: inline Markdown images in the channel header wrap onto their own lines. Exit 1 = bug present.\"\"\"\nimport sys\nfrom playwright.sync_api import sync_playwright\n\nwith sync_playwright() as p:\n    page = p.chromium.launch().new_page()\n    page.goto(f\"{BASE}/{TEAM}/channels/{CHANNEL}\")  # placeholders set by the sandbox\n    page.wait_for_selector(\".channel-header__description .file-preview__button img\")\n    tops = page.eval_on_selector_all(\n        \".channel-header__description .file-preview__button\",\n        \"els => els.map(e => [getComputedStyle(e).display, e.getBoundingClientRect().top])\")\n    # Two images and the text should share one row; display:block stacks them.\n    sys.exit(1 if any(d == \"block\" for d, _ in tops) or len({round(t) for _, t in tops}) > 1 else 0)\n",
+    "reproduction_verified": true,
+    "confidence": 0.9
+  },
+  "diagnosis": {
+    "summary": "Inline Markdown images lose their place in the line of text, and each one wraps onto its own line.",
+    "call_path": [
+      "ChannelHeader",
+      "Markdown",
+      "MarkdownImage",
+      "SizeAwareImage.render",
+      "SizeAwareImage.renderImageContainer"
+    ],
+    "suspects": [
+      {
+        "file": "webapp/channels/src/components/size_aware_image.tsx",
+        "function": "renderImageContainer",
+        "lines": "451-480",
+        "confidence": 0.9,
+        "explanation": "Once the image loads, SizeAwareImage sets display: block as an inline style on .file-preview__button. Inline styles beat stylesheets, so the inline-block rules never apply.",
+        "status": "confirmed",
+        "evidence": "The element's style attribute reads display: block after load.",
+        "excerpt": {
+          "start_line": 451,
+          "lines": [
+            "    renderImageContainer = (children: React.ReactNode, display?: string) => {",
+            "        let containerClass;",
+            "        let containerStyle;",
+            "        if (this.props.handleSmallImageContainer && this.state.isSmallImage) {",
+            "            containerClass = 'small-image__container cursor--pointer a11y--active';",
+            "            if (this.state.imageWidth < MIN_IMAGE_SIZE) {",
+            "                containerClass += ' small-image__container--min-width';",
+            "            }",
+            "",
+            "            containerStyle = this.state.imageWidth > MIN_IMAGE_SIZE ? {",
+            "                width: this.state.imageWidth + 2, // 2px to account for the border",
+            "            } : {};",
+            "        } else {",
+            "            containerClass = 'image-loaded-container';",
+            "        }",
+            "",
+            "        return (",
+            "            <div",
+            "                className='file-preview__button'",
+            "                style={{display}}",
+            "            >",
+            "                <figure",
+            "                    className={containerClass}",
+            "                    style={containerStyle}",
+            "                >",
+            "                    {children}",
+            "                </figure>",
+            "            </div>",
+            "        );",
+            "    };"
+          ],
+          "faulty_lines": [
+            451,
+            470
+          ]
+        }
+      }
+    ],
+    "proposed_patch": "--- a/webapp/channels/src/components/size_aware_image.tsx\n+++ b/webapp/channels/src/components/size_aware_image.tsx\n@@ -401,7 +401,7 @@ export class SizeAwareImage extends React.PureComponent<Props, State> {\n                 {image}\n                 {utilityButtons}\n             </>,\n-            shouldShowImg ? 'block' : 'none',\n+            !shouldShowImg,\n         );\n     };\n \n@@ -448,7 +448,10 @@ export class SizeAwareImage extends React.PureComponent<Props, State> {\n         );\n     };\n \n-    renderImageContainer = (children: React.ReactNode, display?: string) => {\n+    // The container only ever sets `display` inline to hide itself. The visible display mode is\n+    // left to CSS so that each surface can keep images inline (Markdown, channel header) or make\n+    // them block-level (attachments, blocks) instead of being forced to block-level here.\n+    renderImageContainer = (children: React.ReactNode, hidden = false) => {\n         let containerClass;\n         let containerStyle;\n         if (this.props.handleSmallImageContainer && this.state.isSmallImage) {\n@@ -467,7 +470,7 @@ export class SizeAwareImage extends React.PureComponent<Props, State> {\n         return (\n             <div\n                 className='file-preview__button'\n-                style={{display}}\n+                style={hidden ? {display: 'none'} : undefined}\n             >\n                 <figure\n                     className={containerClass}",
+    "caveats": [
+      "SizeAwareImage is shared by attachments and MM Blocks; their block layout depends on the stylesheet once the inline style is gone."
+    ]
+  },
+  "troubleshooting": {
+    "outcome": "fixed",
+    "failure_reason": null,
+    "priority": "P3",
+    "engineer_involved_from_start": false,
+    "stop_rule": null,
+    "budget_used": {},
+    "steps": [],
+    "admin_questions": [],
+    "admin_status": "",
+    "admin_status_log": [],
+    "winning_fix": {
+      "id": "F1",
+      "by": "diagnosis",
+      "target_cause": "C1",
+      "patch": "--- a/webapp/channels/src/components/size_aware_image.tsx\n+++ b/webapp/channels/src/components/size_aware_image.tsx\n@@ -401,7 +401,7 @@ export class SizeAwareImage extends React.PureComponent<Props, State> {\n                 {image}\n                 {utilityButtons}\n             </>,\n-            shouldShowImg ? 'block' : 'none',\n+            !shouldShowImg,\n         );\n     };\n \n@@ -448,7 +448,10 @@ export class SizeAwareImage extends React.PureComponent<Props, State> {\n         );\n     };\n \n-    renderImageContainer = (children: React.ReactNode, display?: string) => {\n+    // The container only ever sets `display` inline to hide itself. The visible display mode is\n+    // left to CSS so that each surface can keep images inline (Markdown, channel header) or make\n+    // them block-level (attachments, blocks) instead of being forced to block-level here.\n+    renderImageContainer = (children: React.ReactNode, hidden = false) => {\n         let containerClass;\n         let containerStyle;\n         if (this.props.handleSmallImageContainer && this.state.isSmallImage) {\n@@ -467,7 +470,7 @@ export class SizeAwareImage extends React.PureComponent<Props, State> {\n         return (\n             <div\n                 className='file-preview__button'\n-                style={{display}}\n+                style={hidden ? {display: 'none'} : undefined}\n             >\n                 <figure\n                     className={containerClass}",
+      "verified": true,
+      "repro_passed": true,
+      "tests_passed": true,
+      "broken_tests": [],
+      "notes": "Repro exits 0 with the patch; existing web app tests pass."
+    },
+    "case_file": {
+      "ticket_id": 39212,
+      "priority": "P3",
+      "problem_summary": "Inline Markdown images wrap onto their own lines once loaded.",
+      "repro": "repro.py exits 1 on 11.7.12.",
+      "failure_reason": null,
+      "failure_reason_also_matched": [],
+      "causes": [
+        {
+          "id": "C1",
+          "description": "Once the image loads, SizeAwareImage sets display: block as an inline style on .file-preview__button. Inline styles beat stylesheets, so the inline-block rules never apply.",
+          "location": "webapp/channels/src/components/size_aware_image.tsx:renderImageContainer",
+          "confidence": 0.9,
+          "status": "confirmed",
+          "evidence": [
+            "The element's style attribute reads display: block after load.",
+            "The stylesheet rule for .file-preview__button asks for inline-block and is overridden."
+          ],
+          "found_by": "diagnosis",
+          "access_needed": ""
+        },
+        {
+          "id": "C2",
+          "description": "The header popover stylesheet gives .file-preview__button the wrong display value.",
+          "location": "channel_header_text_popover.scss",
+          "confidence": 0.2,
+          "status": "ruled_out",
+          "evidence": [
+            "The rule already asks for inline-block; it is overridden by the inline style."
+          ],
+          "found_by": "diagnosis",
+          "access_needed": ""
+        }
+      ],
+      "access_log": [],
+      "access_request": null,
+      "fixes_tried": [
+        {
+          "id": "F1",
+          "by": "diagnosis",
+          "target_cause": "C1",
+          "patch": "--- a/webapp/channels/src/components/size_aware_image.tsx\n+++ b/webapp/channels/src/components/size_aware_image.tsx\n@@ -401,7 +401,7 @@ export class SizeAwareImage extends React.PureComponent<Props, State> {\n                 {image}\n                 {utilityButtons}\n             </>,\n-            shouldShowImg ? 'block' : 'none',\n+            !shouldShowImg,\n         );\n     };\n \n@@ -448,7 +448,10 @@ export class SizeAwareImage extends React.PureComponent<Props, State> {\n         );\n     };\n \n-    renderImageContainer = (children: React.ReactNode, display?: string) => {\n+    // The container only ever sets `display` inline to hide itself. The visible display mode is\n+    // left to CSS so that each surface can keep images inline (Markdown, channel header) or make\n+    // them block-level (attachments, blocks) instead of being forced to block-level here.\n+    renderImageContainer = (children: React.ReactNode, hidden = false) => {\n         let containerClass;\n         let containerStyle;\n         if (this.props.handleSmallImageContainer && this.state.isSmallImage) {\n@@ -467,7 +470,7 @@ export class SizeAwareImage extends React.PureComponent<Props, State> {\n         return (\n             <div\n                 className='file-preview__button'\n-                style={{display}}\n+                style={hidden ? {display: 'none'} : undefined}\n             >\n                 <figure\n                     className={containerClass}",
+          "verified": true,
+          "repro_passed": true,
+          "tests_passed": true,
+          "broken_tests": [],
+          "notes": "Repro exits 0 with the patch; existing web app tests pass."
+        }
+      ],
+      "recommended_next_step": "An engineer reviews fix F1 before it is released.",
+      "engineer_options": [
+        "Point the agent at a new area",
+        "Work alongside the agent",
+        "Take over"
+      ],
+      "timeline": [],
+      "causes_tested": [
+        {
+          "id": "C1",
+          "description": "Once the image loads, SizeAwareImage sets display: block as an inline style on .file-preview__button. Inline styles beat stylesheets, so the inline-block rules never apply.",
+          "location": "webapp/channels/src/components/size_aware_image.tsx:renderImageContainer",
+          "confidence": 0.9,
+          "status": "confirmed",
+          "evidence": [
+            "The element's style attribute reads display: block after load.",
+            "The stylesheet rule for .file-preview__button asks for inline-block and is overridden."
+          ],
+          "found_by": "diagnosis",
+          "access_needed": ""
+        },
+        {
+          "id": "C2",
+          "description": "The header popover stylesheet gives .file-preview__button the wrong display value.",
+          "location": "channel_header_text_popover.scss",
+          "confidence": 0.2,
+          "status": "ruled_out",
+          "evidence": [
+            "The rule already asks for inline-block; it is overridden by the inline style."
+          ],
+          "found_by": "diagnosis",
+          "access_needed": ""
+        }
+      ],
+      "remaining_guesses": [],
+      "access_used": []
+    }
+  }
+}
