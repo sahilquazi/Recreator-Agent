@@ -101,7 +101,7 @@ def _case(**kw) -> CaseInput:
                 repro="Reproduced on Mattermost 10.5.0. Script exits 1 while the bug is present.",
                 causes=causes("untested", "untested"), initial_patch=PATCH.format("first"),
                 initial_target="C1", baseline_access=["Source tree, read-only (Agent B)"],
-                budget_minutes=120.0, started_at=0.0)
+                budget_minutes=120.0, started_at=None)  # None: the engine starts the clock itself (0.0 read as hours overdue)
     base.update(kw)
     return CaseInput(**base)
 
