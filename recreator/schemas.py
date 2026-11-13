@@ -119,6 +119,11 @@ class Suspect(BaseModel):
     lines: str = Field(description="e.g. '2702-2723'")
     confidence: float = Field(ge=0, le=1)
     explanation: str = Field(description="Why this code produces exactly the observed behaviour.")
+    # Used by the troubleshooter. Defaults keep older results valid.
+    status: Literal["untested", "confirmed", "ruled_out"] = Field(
+        default="untested",
+        description="confirmed / ruled_out only if you can point to evidence; otherwise untested.")
+    evidence: str = Field(default="", description="What you read that confirms or rules out this suspect.")
 
 
 class Diagnosis(BaseModel):

@@ -11,11 +11,15 @@ Steps:
   4. If we have a sandbox for this app: reproduce it (Agent A), then re-run
      the repro script ourselves on the current build and the last good build.
   5. If reproduced and source code is available: diagnose (Agent B).
+  5b. Troubleshoot: check the proposed fix; if no fix counts (or the bug wasn't
+      reproduced), classify why, try once more within limits, then hand off
+      with a case file. See recreator/troubleshooter/ and docs/troubleshooter.md.
   6. Privacy gate: block the results if any real personal value leaked.
   7. Save results to Supabase and to runs/<ticket>_<time>/ on disk.
 """
 import argparse
 import json
+import time
 from datetime import datetime, timezone
 
 import anthropic
@@ -27,14 +31,17 @@ from .schemas import Ticket
 from .scrubber import Scrubber
 from .source_tools import SourceTools
 from .store import Store
+from .troubleshooter import TroubleshootSettings, troubleshoot
 
 
 def run_ticket(ticket_id: int, settings: Settings, store: Store, client: anthropic.Anthropic) -> dict:
+    started = time.monotonic()   # the troubleshooter's time budget counts from here
     stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
     run_dir = settings.runs_dir / f"ticket{ticket_id}_{stamp}"
     run_dir.mkdir(parents=True, exist_ok=True)
     result: dict = {"ticket_id": ticket_id, "status": "error", "triage": None,
                     "repro": None, "handoff": None, "diagnosis": None, "error": None}
+    # "troubleshooting" is added only when it runs, so databases without the new column still work.
     scrubber = Scrubber()
     adapter = None
 
@@ -82,6 +89,7 @@ def run_ticket(ticket_id: int, settings: Settings, store: Store, client: anthrop
                   f"clean on last good: {report.verified_clean_on_last_good})")
 
             # 5. Diagnose, if reproduced and we have the source
+            handoff = diag = None
             if report.status != "not_reproduced":
                 handoff = build_handoff(ticket, plan, report)
                 result["handoff"] = handoff.model_dump()
@@ -94,6 +102,19 @@ def run_ticket(ticket_id: int, settings: Settings, store: Store, client: anthrop
                     result["status"] = "diagnosed"
                 else:
                     print("MM_SOURCE_DIR not set; skipping code diagnosis.")
+
+            # 5b. Troubleshoot: a fix only counts if the repro passes with it and the tests still pass.
+            ts_cfg = TroubleshootSettings.from_env()
+            if ts_cfg.enabled and (report.status == "not_reproduced" or diag is not None):
+                print("Troubleshooting...")
+                ts = troubleshoot(client=client, model=settings.model, ticket=ticket, plan=plan,
+                                  report=report, handoff=handoff, diagnosis=diag, adapter=adapter,
+                                  build=build, source_dir=settings.mm_source_dir, run_dir=run_dir,
+                                  scrubber=scrubber, store=store, started_at=started, cfg=ts_cfg)
+                result["troubleshooting"] = ts.model_dump(mode="json")
+                result["status"] = ts.outcome          # fixed | handed_off | waiting_on_admin
+                print(f"Troubleshooting: {ts.outcome}"
+                      + (f" ({ts.failure_reason.value}: {ts.stop_rule})" if ts.failure_reason else ""))
 
     except Exception as err:  # noqa: BLE001 - record any failure instead of crashing a batch
         result["error"] = f"{type(err).__name__}: {err}"

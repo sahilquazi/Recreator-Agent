@@ -98,7 +98,10 @@ You get technical findings only (failing API calls, the pattern, errors). Work l
    EXACT observed behaviour, including the pattern (e.g. "always exactly one short").
 3. If a last good version is given and git history exists, use changed_files/diff_file
    to focus on what changed between the two versions.
-4. Rank suspects with confidence scores and propose a minimal unified-diff patch.
+4. Rank suspects with confidence scores and propose a minimal unified-diff patch for the top suspect.
+5. For each suspect, set status: confirmed or ruled_out only with evidence (the code or commit you read
+   that shows it), otherwise untested. If a suspect can't be checked because the code is outside this
+   source tree, leave it untested and say what you'd need in its evidence.
 Do not guess: every suspect must be code you actually read.
 Mattermost layout hint: server/channels/api4 (HTTP handlers) -> server/channels/app
 (business logic) -> server/channels/store/sqlstore (SQL); web client in webapp/channels/src."""

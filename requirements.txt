@@ -6,3 +6,4 @@ requests>=2.31
 playwright>=1.45
 # Optional, but recommended before real customer tickets go in:
 # presidio-analyzer   (better detection of personal names in free text)
+# For the tests: pytest
