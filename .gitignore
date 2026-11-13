@@ -1,0 +1,12 @@
+# Secrets: never commit these
+.env
+
+# Run output: screenshots and results from real tickets
+runs/
+
+# Python clutter
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/

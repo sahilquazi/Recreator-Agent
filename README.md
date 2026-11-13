@@ -74,12 +74,29 @@ That's expected.
 | `recreator/schemas.py` | The shape of every input and output |
 | `recreator/adapters/mattermost.py` | Docker sandbox + API, browser and log tools |
 | `recreator/source_tools.py` | Read-only code search for Agent B |
+| `recreator/troubleshooter/` | Takes over when no fix counts: classify, bounded retry, handoff case file |
 
 ## Adding another app
 
 Write a class in `recreator/adapters/` with the same methods as `AppAdapter`
 (`handles`, `images_for`, `reset`, `tools`, `run_repro_script`, `close`) and add it
 to `ADAPTERS` in `adapters/__init__.py`. The rest of the pipeline doesn't change.
+
+## Troubleshooter
+
+If no fix counts (the repro must pass with it and the existing tests must still pass), the
+troubleshooter takes over: it tags the failure with one of five reasons, tries once more within
+strict limits (one self-recovery pass, one access request, one Reviewer retry), then hands the case
+to an engineer with a case file (`runs/<ticket>_<time>/case_file.md`). It never loops.
+
+```bash
+python -m recreator.troubleshooter.demo     # every route, no API key or Docker needed
+python -m pytest tests -q
+```
+
+Already created `recreator_runs`? Run `sql/troubleshooter_migration.sql` once.
+How it works: [recreator/troubleshooter/README.md](recreator/troubleshooter/README.md) ·
+Spec mapping and open decisions: [docs/troubleshooter.md](docs/troubleshooter.md).
 
 ## Before real customer tickets go in
 
