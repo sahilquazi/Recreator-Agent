@@ -1,6 +1,6 @@
 # Troubleshooter (Diagnosis Agent: Troubleshooting System)
 
-**Owner:** Tvisha Talwar · **Code:** `recreator/troubleshooter/` · **Spec:** Diagnosis Agent: Troubleshooting System Spec
+**Owner:** Tvisha Talwar · **Code:** `recreator/troubleshooter/` · **Spec:** Diagnosis Agent: Troubleshooting System Spec · **How it works:** [recreator/troubleshooter/README.md](../recreator/troubleshooter/README.md)
 
 ## What it does
 

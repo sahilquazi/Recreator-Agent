@@ -94,8 +94,9 @@ python -m recreator.troubleshooter.demo     # every route, no API key or Docker 
 python -m pytest tests -q
 ```
 
-Already created `recreator_runs`? Run `sql/troubleshooter_migration.sql` once. Full write-up:
-[docs/troubleshooter.md](docs/troubleshooter.md).
+Already created `recreator_runs`? Run `sql/troubleshooter_migration.sql` once.
+How it works: [recreator/troubleshooter/README.md](recreator/troubleshooter/README.md) ·
+Spec mapping and open decisions: [docs/troubleshooter.md](docs/troubleshooter.md).
 
 ## Before real customer tickets go in
 
