@@ -1,0 +1,125 @@
+{
+  "problem": {
+    "text": "Channel header member count is always one lower than the member list.",
+    "sourceIds": [
+      "run-2-triage",
+      "run-2-case-file",
+      "run-2-diagnosis"
+    ]
+  },
+  "environment": {
+    "product": "mattermost",
+    "version": "10.5.0",
+    "surfaces": [
+      "Web app > channel header > member count"
+    ],
+    "sourceIds": [
+      "run-2-triage"
+    ]
+  },
+  "rootCause": {
+    "text": "Member count query excludes the requesting user",
+    "file": "file1.go",
+    "fn": "fn1",
+    "confidence": "medium",
+    "sourceIds": [
+      "run-2-case-file",
+      "run-2-diagnosis"
+    ]
+  },
+  "checks": [
+    {
+      "id": "repro-passes",
+      "name": "Repro passes with the fix",
+      "description": "The Recreator's repro script exits 0 with the patch applied in the sandbox."
+    },
+    {
+      "id": "tests-pass",
+      "name": "Existing tests still pass",
+      "description": "The product's existing tests still pass with the patch applied."
+    }
+  ],
+  "solutionsTested": [
+    {
+      "id": 1,
+      "approach": "Patch F1, for cause C1 (the root cause)",
+      "results": {
+        "repro-passes": "not_run",
+        "tests-pass": "not_run"
+      },
+      "overall": "not_run",
+      "why": "No patch verifier configured (set TROUBLESHOOT_VERIFY_CMD).",
+      "basis": "reasoned",
+      "sourceIds": [
+        "run-2-case-file"
+      ]
+    }
+  ],
+  "outcome": "no_fix",
+  "recommendedSolution": null,
+  "nextStep": {
+    "reason": "Cause found, but no fix passes",
+    "text": "Cause C1 is confirmed (Member count query excludes the requesting user). Fixes tried: F1. Write a fix for it starting from the notes on the last attempt. The proposed patch was never verified; applying it and re-running the repro is the quickest check.",
+    "sourceIds": [
+      "run-2-case-file"
+    ]
+  },
+  "tags": [
+    {
+      "category": "area",
+      "value": "server"
+    },
+    {
+      "category": "fix_size",
+      "value": "small"
+    },
+    {
+      "category": "version",
+      "value": "10.5.0"
+    }
+  ],
+  "evidence": [
+    {
+      "id": "run-2-triage",
+      "kind": "triage",
+      "label": "Ticket 2 triage"
+    },
+    {
+      "id": "run-2-repro",
+      "kind": "repro",
+      "label": "Ticket 2 repro"
+    },
+    {
+      "id": "run-2-diagnosis",
+      "kind": "diagnosis",
+      "label": "Ticket 2 diagnosis"
+    },
+    {
+      "id": "run-2-case-file",
+      "kind": "case_file",
+      "label": "Ticket 2 case file"
+    }
+  ],
+  "knownGaps": [
+    {
+      "kind": "not_validated",
+      "text": "Patch F1 was not run against the repro or the tests.",
+      "sourceIds": [
+        "run-2-case-file"
+      ]
+    },
+    {
+      "kind": "unseen",
+      "text": "No last good version is known, so the repro was not checked on a clean build.",
+      "sourceIds": [
+        "run-2-repro"
+      ]
+    }
+  ],
+  "recreation": {
+    "attached": true,
+    "text": "*Attached is the code recreation.",
+    "script": "import sys\nsys.exit(1)  # demo: the real script checks the API's member_count\n",
+    "verified": true
+  }
+}

@@ -12,9 +12,11 @@ create table if not exists public.recreator_runs (
   handoff     jsonb,
   diagnosis   jsonb,
   troubleshooting jsonb,         -- failure reason, steps, admin status and the case file
+  solution_summary jsonb,        -- the engineer write-up (recreator/solution_summary); same shape the portal reads
   error       text
 );
 -- Already created the table before the troubleshooter? Run sql/troubleshooter_migration.sql instead.
+-- Before the Solution Summary? Run sql/solution_summary_migration.sql.
 
 -- 2) Turn on row-level security. With no policies, only the service role
 --    (used by the pipeline on a trusted machine) can read or write.

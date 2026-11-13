@@ -1,0 +1,132 @@
+{
+  "problem": {
+    "text": "Channel header member count is always one lower than the member list.",
+    "sourceIds": [
+      "run-2-triage",
+      "run-2-case-file",
+      "run-2-diagnosis"
+    ]
+  },
+  "environment": {
+    "product": "mattermost",
+    "version": "10.5.0",
+    "surfaces": [
+      "Web app > channel header > member count"
+    ],
+    "sourceIds": [
+      "run-2-triage"
+    ]
+  },
+  "rootCause": {
+    "text": "Not confirmed yet. Strongest remaining guess: Notification service drops member-added events",
+    "file": "",
+    "fn": "",
+    "confidence": "low",
+    "sourceIds": [
+      "run-2-case-file",
+      "run-2-diagnosis"
+    ]
+  },
+  "checks": [
+    {
+      "id": "repro-passes",
+      "name": "Repro passes with the fix",
+      "description": "The Recreator's repro script exits 0 with the patch applied in the sandbox."
+    },
+    {
+      "id": "tests-pass",
+      "name": "Existing tests still pass",
+      "description": "The product's existing tests still pass with the patch applied."
+    }
+  ],
+  "solutionsTested": [
+    {
+      "id": 1,
+      "approach": "Patch F1, for cause C1: Member count query excludes the requesting user",
+      "results": {
+        "repro-passes": "fail",
+        "tests-pass": "not_run"
+      },
+      "overall": "fail",
+      "why": "The repro still fails with this fix.",
+      "basis": "sandbox",
+      "sourceIds": [
+        "run-2-case-file"
+      ]
+    }
+  ],
+  "outcome": "no_fix",
+  "recommendedSolution": null,
+  "nextStep": {
+    "reason": "All likely causes ruled out",
+    "text": "Check C3 next (Notification service drops member-added events); it needs Read-only access to notification_service_logs: Logs from the notification service the channel code calls.",
+    "sourceIds": [
+      "run-2-case-file"
+    ]
+  },
+  "tags": [
+    {
+      "category": "area",
+      "value": "server"
+    },
+    {
+      "category": "fix_size",
+      "value": "small"
+    },
+    {
+      "category": "version",
+      "value": "10.5.0"
+    }
+  ],
+  "evidence": [
+    {
+      "id": "run-2-triage",
+      "kind": "triage",
+      "label": "Ticket 2 triage"
+    },
+    {
+      "id": "run-2-repro",
+      "kind": "repro",
+      "label": "Ticket 2 repro"
+    },
+    {
+      "id": "run-2-diagnosis",
+      "kind": "diagnosis",
+      "label": "Ticket 2 diagnosis"
+    },
+    {
+      "id": "run-2-case-file",
+      "kind": "case_file",
+      "label": "Ticket 2 case file"
+    }
+  ],
+  "knownGaps": [
+    {
+      "kind": "inferred",
+      "text": "No cause is confirmed yet, so the root cause above is not proven.",
+      "sourceIds": [
+        "run-2-case-file"
+      ]
+    },
+    {
+      "kind": "unchecked",
+      "text": "Untested cause C3: Notification service drops member-added events Needs: Read-only access to notification_service_logs: Logs from the notification service the channel code calls.",
+      "sourceIds": [
+        "run-2-case-file"
+      ]
+    },
+    {
+      "kind": "unseen",
+      "text": "No last good version is known, so the repro was not checked on a clean build.",
+      "sourceIds": [
+        "run-2-repro"
+      ]
+    }
+  ],
+  "recreation": {
+    "attached": true,
+    "text": "*Attached is the code recreation.",
+    "script": "import sys\nsys.exit(1)  # demo: the real script checks the API's member_count\n",
+    "verified": true
+  }
+}

@@ -24,9 +24,13 @@ Handoff ── technical findings only, no ticket text
    ▼
 Agent B: Diagnosis ── reads the source tree (read-only), ranks suspects, proposes a patch
    ▼
+Troubleshooter ── no fix that counts? classify, one bounded retry, hand off with a case file
+   ▼
+Solution Summary ── the engineer write-up: root cause, fixes tried and how, the fix or the next step
+   ▼
 Privacy gate ── any real value found in the output → results discarded
    ▼
-recreator_runs (Supabase) + runs/<ticket>_<time>/ (screenshots, repro.py, result.json)
+recreator_runs (Supabase) + runs/<ticket>_<time>/ (screenshots, repro.py, result.json, solution_summary.pdf)
 ```
 
 Agent A never sees source code and Agent B never sees the ticket, same as the pilot.
@@ -75,6 +79,7 @@ That's expected.
 | `recreator/adapters/mattermost.py` | Docker sandbox + API, browser and log tools |
 | `recreator/source_tools.py` | Read-only code search for Agent B |
 | `recreator/troubleshooter/` | Takes over when no fix counts: classify, bounded retry, handoff case file |
+| `recreator/solution_summary/` | The engineer write-up of each run, as JSON, HTML and PDF |
 
 ## Adding another app
 
@@ -97,6 +102,20 @@ python -m pytest tests -q
 Already created `recreator_runs`? Run `sql/troubleshooter_migration.sql` once.
 How it works: [recreator/troubleshooter/README.md](recreator/troubleshooter/README.md) ·
 Spec mapping and open decisions: [docs/troubleshooter.md](docs/troubleshooter.md).
+
+## Solution Summary
+
+After the troubleshooter, each run with a diagnosis gets a Solution Summary for engineers: what's broken, the root
+cause (never one that was ruled out), every fix tried and how it was tested, the fix or the next step, and what's
+still unknown. It's saved in `recreator_runs.solution_summary` and as `solution_summary.json`, `.html` and `.pdf` in
+the run folder. No model call. Same rules and JSON shape as the Engineering Direct portal's Solution Summary.
+
+```bash
+python -m recreator.solution_summary.demo       # every route, no API key or Docker needed
+```
+
+Already created `recreator_runs`? Run `sql/solution_summary_migration.sql` once (until then runs save without the
+summary). For PDFs, run `playwright install chromium` once. Details: [docs/solution-summary.md](docs/solution-summary.md).
 
 ## Before real customer tickets go in
 

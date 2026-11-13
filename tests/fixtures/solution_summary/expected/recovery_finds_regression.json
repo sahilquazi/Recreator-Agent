@@ -1,0 +1,133 @@
+{
+  "problem": {
+    "text": "Channel header member count is always one lower than the member list.",
+    "sourceIds": [
+      "run-2-triage",
+      "run-2-case-file",
+      "run-2-diagnosis"
+    ]
+  },
+  "environment": {
+    "product": "mattermost",
+    "version": "10.5.0",
+    "surfaces": [
+      "Web app > channel header > member count"
+    ],
+    "sourceIds": [
+      "run-2-triage"
+    ]
+  },
+  "rootCause": {
+    "text": "Commit a1b2c3 changed the stats query to exclude the caller",
+    "file": "",
+    "fn": "",
+    "confidence": "high",
+    "sourceIds": [
+      "run-2-case-file",
+      "run-2-diagnosis"
+    ]
+  },
+  "checks": [
+    {
+      "id": "repro-passes",
+      "name": "Repro passes with the fix",
+      "description": "The Recreator's repro script exits 0 with the patch applied in the sandbox."
+    },
+    {
+      "id": "tests-pass",
+      "name": "Existing tests still pass",
+      "description": "The product's existing tests still pass with the patch applied."
+    }
+  ],
+  "solutionsTested": [
+    {
+      "id": 1,
+      "approach": "Patch F1, for cause C1: Member count query excludes the requesting user",
+      "results": {
+        "repro-passes": "fail",
+        "tests-pass": "not_run"
+      },
+      "overall": "fail",
+      "why": "The repro still fails with this fix.",
+      "basis": "sandbox",
+      "sourceIds": [
+        "run-2-case-file"
+      ]
+    },
+    {
+      "id": 2,
+      "approach": "Patch F2, for cause C3 (the root cause)",
+      "results": {
+        "repro-passes": "pass",
+        "tests-pass": "pass"
+      },
+      "overall": "pass",
+      "why": "repro exits 0, tests green",
+      "basis": "sandbox",
+      "sourceIds": [
+        "run-2-case-file"
+      ]
+    }
+  ],
+  "outcome": "fix_found",
+  "recommendedSolution": {
+    "solutionId": 2,
+    "change": "Apply patch F2, which changes `server/channels/app/channel.go`.",
+    "confidence": "high",
+    "sourceIds": [
+      "run-2-case-file"
+    ]
+  },
+  "nextStep": null,
+  "tags": [
+    {
+      "category": "area",
+      "value": "server"
+    },
+    {
+      "category": "fix_size",
+      "value": "small"
+    },
+    {
+      "category": "version",
+      "value": "10.5.0"
+    }
+  ],
+  "evidence": [
+    {
+      "id": "run-2-triage",
+      "kind": "triage",
+      "label": "Ticket 2 triage"
+    },
+    {
+      "id": "run-2-repro",
+      "kind": "repro",
+      "label": "Ticket 2 repro"
+    },
+    {
+      "id": "run-2-diagnosis",
+      "kind": "diagnosis",
+      "label": "Ticket 2 diagnosis"
+    },
+    {
+      "id": "run-2-case-file",
+      "kind": "case_file",
+      "label": "Ticket 2 case file"
+    }
+  ],
+  "knownGaps": [
+    {
+      "kind": "unseen",
+      "text": "No last good version is known, so the repro was not checked on a clean build.",
+      "sourceIds": [
+        "run-2-repro"
+      ]
+    }
+  ],
+  "recreation": {
+    "attached": true,
+    "text": "*Attached is the code recreation.",
+    "script": "import sys\nsys.exit(1)  # demo: the real script checks the API's member_count\n",
+    "verified": true
+  }
+}

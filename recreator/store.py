@@ -31,4 +31,13 @@ class Store:
         return [r["id"] for r in rows]
 
     def save_run(self, row: dict) -> None:
-        self.db.table(self.runs).insert(row).execute()
+        try:
+            self.db.table(self.runs).insert(row).execute()
+        except Exception as err:  # noqa: BLE001
+            # A database without the solution_summary column yet (sql/solution_summary_migration.sql): save the run
+            # without it rather than lose it. The summary is still in the run folder.
+            if "solution_summary" not in row or "solution_summary" not in str(err):
+                raise
+            print("recreator_runs has no solution_summary column yet; saved the run without it. "
+                  "Run sql/solution_summary_migration.sql once.")
+            self.db.table(self.runs).insert({k: v for k, v in row.items() if k != "solution_summary"}).execute()

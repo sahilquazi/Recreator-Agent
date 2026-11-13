@@ -14,8 +14,10 @@ Steps:
   5b. Troubleshoot: check the proposed fix; if no fix counts (or the bug wasn't
       reproduced), classify why, try once more within limits, then hand off
       with a case file. See recreator/troubleshooter/ and docs/troubleshooter.md.
+  5c. Solution Summary: the engineer write-up of the run (root cause, every fix tried and how it was tested, the fix
+      or why there is none yet). No model call. See recreator/solution_summary/ and docs/solution-summary.md.
   6. Privacy gate: block the results if any real personal value leaked.
-  7. Save results to Supabase and to runs/<ticket>_<time>/ on disk.
+  7. Save results to Supabase and to runs/<ticket>_<time>/ on disk, with solution_summary.json/.html/.pdf.
 """
 import argparse
 import json
@@ -29,6 +31,7 @@ from .agents import build_handoff, diagnose, recreate, triage
 from .config import Settings, load_settings
 from .schemas import Ticket
 from .scrubber import Scrubber
+from .solution_summary import build_summary, known_files, report_evidence, save_report
 from .source_tools import SourceTools
 from .store import Store
 from .troubleshooter import TroubleshootSettings, troubleshoot
@@ -123,6 +126,18 @@ def run_ticket(ticket_id: int, settings: Settings, store: Store, client: anthrop
         if adapter:
             adapter.close()
 
+    # 5c. Solution Summary, built from the scrubbed result so the privacy gate below checks it too.
+    #     Added only when there is a diagnosis to summarize; a failure here never stops the run from being saved.
+    summary = None
+    try:
+        summary = build_summary(result)
+        if summary:
+            result["solution_summary"] = summary.to_json()
+            print(f"Solution summary: {'fix found' if summary.outcome == 'fix_found' else 'no fix yet'}")
+    except Exception as err:  # noqa: BLE001
+        summary = None
+        print(f"Solution summary skipped: {type(err).__name__}: {err}")
+
     # 6. Privacy gate: if a real value slipped through, keep nothing but the fact that it happened.
     leaks = scrubber.leaked(json.dumps(result, default=str))
     if leaks:
@@ -132,6 +147,12 @@ def run_ticket(ticket_id: int, settings: Settings, store: Store, client: anthrop
 
     # 7. Save
     (run_dir / "result.json").write_text(json.dumps(result, indent=2, default=str))
+    if summary and "solution_summary" in result:   # not after a privacy block
+        try:
+            title = (result.get("triage") or {}).get("claim") or f"Ticket {ticket_id}"
+            save_report(summary, report_evidence(result, run_dir), run_dir, title, known_files(result))
+        except Exception as err:  # noqa: BLE001
+            print(f"Solution summary report skipped: {type(err).__name__}: {err}")
     store.save_run(result)
     print(f"Saved. Local copy: {run_dir}")
     return result

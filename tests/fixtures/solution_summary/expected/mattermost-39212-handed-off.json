@@ -1,0 +1,139 @@
+{
+  "problem": {
+    "text": "Inline Markdown images lose their place in the line of text, and each one wraps onto its own line.",
+    "sourceIds": [
+      "run-39212-triage",
+      "run-39212-case-file",
+      "run-39212-diagnosis"
+    ]
+  },
+  "environment": {
+    "product": "Mattermost",
+    "version": "11.7.12",
+    "surfaces": [
+      "Web app > channel header > inline Markdown images"
+    ],
+    "sourceIds": [
+      "run-39212-triage"
+    ]
+  },
+  "rootCause": {
+    "text": "Once the image loads, SizeAwareImage sets display: block as an inline style on .file-preview__button. Inline styles beat stylesheets, so the inline-block rules never apply.",
+    "file": "webapp/channels/src/components/size_aware_image.tsx",
+    "fn": "renderImageContainer",
+    "confidence": "high",
+    "sourceIds": [
+      "run-39212-case-file",
+      "run-39212-diagnosis"
+    ]
+  },
+  "checks": [
+    {
+      "id": "repro-passes",
+      "name": "Repro passes with the fix",
+      "description": "The Recreator's repro script exits 0 with the patch applied in the sandbox."
+    },
+    {
+      "id": "tests-pass",
+      "name": "Existing tests still pass",
+      "description": "The product's existing tests still pass with the patch applied."
+    }
+  ],
+  "solutionsTested": [
+    {
+      "id": 1,
+      "approach": "Patch F1, for cause C1 (the root cause)",
+      "results": {
+        "repro-passes": "not_run",
+        "tests-pass": "not_run"
+      },
+      "overall": "not_run",
+      "why": "Not verified: no patch verifier is configured.",
+      "basis": "reasoned",
+      "sourceIds": [
+        "run-39212-case-file"
+      ]
+    }
+  ],
+  "outcome": "no_fix",
+  "recommendedSolution": null,
+  "nextStep": {
+    "reason": "Cause found, but no fix passes",
+    "text": "Build Mattermost 11.7.12 with patch F1 and rerun repro.py. If the repro exits 0 and the existing tests pass, the fix counts.",
+    "sourceIds": [
+      "run-39212-case-file"
+    ]
+  },
+  "tags": [
+    {
+      "category": "area",
+      "value": "web app front end"
+    },
+    {
+      "category": "fix_size",
+      "value": "small"
+    },
+    {
+      "category": "version",
+      "value": "11.7.12"
+    }
+  ],
+  "evidence": [
+    {
+      "id": "run-39212-triage",
+      "kind": "triage",
+      "label": "Ticket 39212 triage"
+    },
+    {
+      "id": "run-39212-repro",
+      "kind": "repro",
+      "label": "Ticket 39212 repro"
+    },
+    {
+      "id": "run-39212-diagnosis",
+      "kind": "diagnosis",
+      "label": "Ticket 39212 diagnosis"
+    },
+    {
+      "id": "run-39212-case-file",
+      "kind": "case_file",
+      "label": "Ticket 39212 case file"
+    }
+  ],
+  "knownGaps": [
+    {
+      "kind": "unchecked",
+      "text": "SizeAwareImage is shared by attachments and MM Blocks; their block layout depends on the stylesheet once the inline style is gone.",
+      "sourceIds": [
+        "run-39212-diagnosis"
+      ]
+    },
+    {
+      "kind": "unchecked",
+      "text": "Untested cause C2: The header popover stylesheet gives .file-preview__button the wrong display value. Needs: current access.",
+      "sourceIds": [
+        "run-39212-case-file"
+      ]
+    },
+    {
+      "kind": "not_validated",
+      "text": "Patch F1 was not run against the repro or the tests.",
+      "sourceIds": [
+        "run-39212-case-file"
+      ]
+    },
+    {
+      "kind": "unseen",
+      "text": "No last good version is known, so the repro was not checked on a clean build.",
+      "sourceIds": [
+        "run-39212-repro"
+      ]
+    }
+  ],
+  "recreation": {
+    "attached": true,
+    "text": "*Attached is the code recreation.",
+    "script": "\"\"\"Repro: inline Markdown images in the channel header wrap onto their own lines. Exit 1 = bug present.\"\"\"\nimport sys\nfrom playwright.sync_api import sync_playwright\n\nwith sync_playwright() as p:\n    page = p.chromium.launch().new_page()\n    page.goto(f\"{BASE}/{TEAM}/channels/{CHANNEL}\")  # placeholders set by the sandbox\n    page.wait_for_selector(\".channel-header__description .file-preview__button img\")\n    tops = page.eval_on_selector_all(\n        \".channel-header__description .file-preview__button\",\n        \"els => els.map(e => [getComputedStyle(e).display, e.getBoundingClientRect().top])\")\n    # Two images and the text should share one row; display:block stacks them.\n    sys.exit(1 if any(d == \"block\" for d, _ in tops) or len({round(t) for _, t in tops}) > 1 else 0)\n",
+    "verified": true
+  }
+}
